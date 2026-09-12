@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOVA — Rota PCD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800;900&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  :root{
+    --bg:#150A28;
+    --panel:#20103f;
+    --map-bg:#180d33;
+    --ink:#F4EEF7;
+    --ink-soft:#a996c4;
+    --accent:#C23A57;
+    --font-display:'Unbounded','Arial Black',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+
+  /* ---------- acessibilidade ---------- */
+  .skip-link{
+    position:absolute; left:16px; top:-60px; z-index:2000;
+    background:#fff; color:var(--accent); font-family:'Segoe UI',sans-serif;
+    font-weight:600; font-size:13px; padding:10px 16px; border-radius:8px;
+    transition:top .15s ease;
+  }
+  .skip-link:focus{top:16px;}
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  .leaflet-container a:focus-visible{
+    outline:3px solid #fff;
+    outline-offset:2px;
+    box-shadow:0 0 0 5px rgba(194,58,87,.6);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-display);
+    min-height:100vh;
+    padding:24px;
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+  }
+
+  header{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  header .brand{margin-right:auto;}
+  header a{
+    color:var(--ink); text-decoration:none;
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:600; color:var(--ink-soft);
+  }
+  header a:hover{color:var(--ink);}
+  header a svg{width:16px; height:16px;}
+  .brand{
+    display:flex; flex-direction:column;
+    color:var(--accent); font-weight:800; font-size:14px;
+    line-height:0.82; letter-spacing:-0.02em;
+  }
+
+  .tabs{display:flex; gap:8px; flex-wrap:wrap;}
+  .tab-link{
+    font-family:'Segoe UI',sans-serif; font-size:13px; font-weight:600;
+    color:var(--ink-soft); text-decoration:none;
+    padding:8px 16px; border-radius:999px; border:1.5px solid rgba(244,238,247,.16);
+  }
+  .tab-link:hover{border-color:rgba(244,238,247,.35); color:var(--ink);}
+  .tab-link.active{background:var(--accent); border-color:var(--accent); color:#fff;}
+
+  /* ---------- intro da página ---------- */
+  .intro{max-width:66ch;}
+  .intro h1{
+    font-size:clamp(22px,3.4vw,30px); font-weight:800; margin:0 0 8px; text-wrap:balance;
+  }
+  .intro p{
+    font-family:'Segoe UI',sans-serif; font-size:14px; line-height:1.6;
+    color:var(--ink-soft); margin:0;
+  }
+  .intro p b{color:var(--ink); font-weight:600;}
+
+  main{
+    flex:1;
+    display:grid;
+    grid-template-columns:minmax(280px,360px) 1fr;
+    gap:24px;
+    align-items:start;
+  }
+  @media (max-width:760px){
+    main{grid-template-columns:1fr;}
+  }
+
+  /* ---------- cartão de busca (mesmo padrão da home) ---------- */
+  .card{
+    background:var(--panel);
+    border:1px solid rgba(244,238,247,.08);
+    border-radius:18px;
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    font-weight:600; color:var(--ink-soft);
+  }
+  .field-hint{font-size:11px; color:var(--ink-soft); opacity:.85; margin:-2px 0 2px;}
+  .field-input-wrap{position:relative;}
+  .field-input-wrap svg{
+    position:absolute; left:14px; top:50%; translate:0 -50%;
+    width:18px; height:18px; color:#fff; pointer-events:none;
+  }
+  .field-input{
+    outline:none;
+    appearance:none;
+    font:inherit;
+    font-weight:500;
+    color:#fff;
+    background:var(--accent);
+    border:1.5px solid var(--accent);
+    border-radius:10px;
+    padding:12px 14px 12px 42px;
+    width:100%;
+    transition:background .15s ease, box-shadow .15s ease;
+  }
+  .field-input::placeholder{color:#fff; opacity:.75;}
+  .field-input:focus{
+    background:#a92a45;
+    box-shadow:0 0 0 3px rgba(194,58,87,.35);
+  }
+
+  /* ---------- confirmação do que foi aplicado, dentro do resultado ---------- */
+  .prefs-preview{display:flex; gap:6px; flex-wrap:wrap;}
+  .prefs-chip{
+    font-family:'Segoe UI',sans-serif; font-size:11px; color:var(--ink-soft);
+    background:rgba(244,238,247,.06); border:1px solid rgba(244,238,247,.14);
+    border-radius:999px; padding:4px 10px;
+  }
+  .prefs-chip b{color:var(--ink); font-weight:600;}
+
+  /* ---------- escolha de perfil / prioridade / necessidade (chips) ---------- */
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .chip{
+    font-family:'Segoe UI',sans-serif; font-size:12.5px; font-weight:500;
+    color:var(--ink-soft);
+    background:var(--map-bg); border:1.5px solid rgba(244,238,247,.16);
+    border-radius:999px; padding:8px 14px; cursor:pointer;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .chip:hover{border-color:rgba(244,238,247,.35);}
+  .chip[aria-pressed="true"]{
+    background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600;
+  }
+
+  .btn-primary{
+    margin-top:4px;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:#fff; color:var(--accent);
+    border:none; border-radius:10px;
+    padding:13px 18px;
+    font-family:var(--font-display); font-weight:700; font-size:14.5px;
+    cursor:pointer;
+    transition:transform .1s ease, background .15s ease;
+  }
+  .btn-primary svg{width:18px; height:18px;}
+  .btn-primary:hover{background:#ffe1ea;}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-primary:disabled{opacity:.6; cursor:default;}
+
+  .result-box{
+    display:none;
+    flex-direction:column; gap:12px;
+    background:var(--map-bg);
+    border:1px solid rgba(244,238,247,.1);
+    border-radius:12px;
+    padding:14px 16px;
+    font-family:'Segoe UI',sans-serif;
+  }
+  .result-box.show{display:flex;}
+  .result-stats{
+    display:flex; gap:14px; font-size:13px; color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;
+  }
+  .result-stats b{color:var(--ink); font-weight:600;}
+  .result-narrative{font-size:14px; line-height:1.6; margin:0; white-space:pre-line;}
+  .result-tag{
+    align-self:flex-start;
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-soft); border:1px solid rgba(244,238,247,.15);
+    border-radius:999px; padding:3px 9px;
+  }
+
+  /* ---------- comparativo de modais (tempo + preço) ---------- */
+  .alt-list{display:flex; flex-direction:column; gap:6px;}
+  .alt-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    font-size:12.5px; padding:9px 11px; border-radius:9px;
+    background:rgba(244,238,247,.05);
+    border:1px solid transparent;
+  }
+  .alt-row.primary{
+    background:rgba(194,58,87,.16);
+    border-color:rgba(194,58,87,.4);
+  }
+  .alt-row .alt-name{
+    display:flex; align-items:center; gap:8px; color:var(--ink-soft); font-weight:600;
+  }
+  .alt-row.primary .alt-name{color:var(--ink);}
+  .alt-row .alt-figures{
+    display:flex; gap:12px; color:var(--ink-soft); font-variant-numeric:tabular-nums;
+  }
+  .alt-row.primary .alt-figures{color:var(--ink);}
+  .alt-row .alt-figures .price{min-width:64px; text-align:right;}
+  .alt-legend{
+    margin:2px 0 0; font-family:'Segoe UI',sans-serif; font-size:10.5px;
+    color:var(--ink-soft); opacity:.8;
+  }
+
+  .error-box{
+    display:none;
+    font-family:'Segoe UI',sans-serif; font-size:13px;
+    color:#ffb4b4; background:rgba(226,60,60,.12);
+    border:1px solid rgba(226,60,60,.35);
+    border-radius:10px; padding:11px 14px;
+  }
+  .error-box.show{display:block;}
+
+  /* ---------- mapa real (Leaflet + OpenStreetMap) ---------- */
+  .map-panel{
+    position:relative;
+    background:var(--map-bg);
+    border:1px solid rgba(244,238,247,.08);
+    border-radius:18px;
+    overflow:hidden;
+    min-height:420px;
+    height:100%;
+  }
+  #map{width:100%; height:100%; min-height:420px; background:var(--map-bg);}
+  .leaflet-container{background:var(--map-bg) !important; font-family:'Segoe UI',sans-serif;}
+  .mova-pin-to svg{display:block;}
+  .map-note{
+    position:absolute; left:16px; bottom:14px; z-index:1000;
+    font-size:11px; color:var(--ink-soft);
+    font-family:'Segoe UI',sans-serif; letter-spacing:.02em;
+    background:rgba(21,10,40,.65); padding:4px 9px; border-radius:999px;
+  }
+
+  /* ---------- dicas (conteúdo fixo, não gerado por IA) ---------- */
+  .tips{
+    font-family:'Segoe UI',sans-serif;
+    margin-top:4px;
+  }
+  .tips h2{
+    font-family:var(--font-display); font-size:17px; font-weight:700;
+    color:var(--ink); margin:0 0 4px;
+  }
+  .tips-note{font-size:12px; color:var(--ink-soft); margin:0 0 16px;}
+  .tips-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:12px;
+  }
+  .tip-card{
+    background:var(--panel); border:1px solid rgba(244,238,247,.08);
+    border-radius:12px; padding:14px 16px;
+  }
+  .tip-card b{display:block; font-size:13px; color:var(--ink); margin-bottom:4px;}
+  .tip-card p{margin:0; font-size:12.5px; line-height:1.5; color:var(--ink-soft);}
+</style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Pular para o conteúdo</a>
+  <header>
+    <a href="index.html">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="17" y1="10" x2="3" y2="10"/>
+        <polyline points="8 5 3 10 8 15"/>
+      </svg>
+      Voltar
+    </a>
+    <div class="brand" aria-label="MOVA">
+      <span aria-hidden="true">MO</span>
+      <span aria-hidden="true">VA</span>
+    </div>
+    <nav class="tabs" aria-label="Modo de busca">
+      <a href="viagem.html" class="tab-link">Rota geral</a>
+      <a href="pcd.html" class="tab-link active">Rota PCD</a>
+    </nav>
+  </header>
+
+  <div class="intro">
+    <h1>Rota pensada pra você, não pra média das pessoas</h1>
+    <p>Essa é a ideia por trás do MOVA: <b>o perfil de mobilidade entra primeiro</b>, não como
+    filtro extra. Diz de onde parte, pra onde vai e como se locomove — a rota é calculada em
+    cima disso, não ajustada depois.</p>
+  </div>
+
+  <main id="main-content">
+    <div class="card">
+      <div class="field">
+        <label for="input-from">Partida</label>
+        <div class="field-input-wrap">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+            <circle cx="10" cy="10" r="2.4" fill="currentColor"/>
+          </svg>
+          <input class="field-input" id="input-from" type="text" placeholder="Onde você está?">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="input-to">Destino</label>
+        <div class="field-input-wrap">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <polygon points="10,2 18,17 2,17" fill="currentColor"/>
+          </svg>
+          <input class="field-input" id="input-to" type="text" placeholder="Pra onde vai?">
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="modal-group-label">Seu jeito de ir</label>
+        <div class="chip-row" role="group" aria-labelledby="modal-group-label" data-chip-group="modal">
+          <button type="button" class="chip" data-value="cadeira-de-rodas" aria-pressed="true">Cadeira de rodas</button>
+          <button type="button" class="chip" data-value="com-apoio" aria-pressed="false">Com apoio / muletas</button>
+          <button type="button" class="chip" data-value="carrinho-bebe" aria-pressed="false">Carrinho de bebê</button>
+          <button type="button" class="chip" data-value="onibus" aria-pressed="false">Ônibus</button>
+          <button type="button" class="chip" data-value="trem" aria-pressed="false">Trem</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="need-group-label">Tipo de necessidade (opcional)</label>
+        <p class="field-hint">Pode marcar mais de uma — ajuda a IA a escrever a narrativa certa pra você.</p>
+        <div class="chip-row" role="group" aria-labelledby="need-group-label" data-chip-group-multi="necessidade">
+          <button type="button" class="chip" data-value="Mobilidade" aria-pressed="false">Mobilidade</button>
+          <button type="button" class="chip" data-value="Visual" aria-pressed="false">Visual</button>
+          <button type="button" class="chip" data-value="Auditiva" aria-pressed="false">Auditiva</button>
+          <button type="button" class="chip" data-value="Intelectual/cognitiva" aria-pressed="false">Intelectual/cognitiva</button>
+          <button type="button" class="chip" data-value="Outra" aria-pressed="false">Outra</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label id="priority-group-label">Prioridade</label>
+        <div class="chip-row" role="group" aria-labelledby="priority-group-label" data-chip-group="priority">
+          <button type="button" class="chip" data-value="rapido" aria-pressed="false">Mais rápido</button>
+          <button type="button" class="chip" data-value="barato" aria-pressed="false">Mais barato</button>
+          <button type="button" class="chip" data-value="acessivel" aria-pressed="true">Mais acessível</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="input-notes">Observações (opcional)</label>
+        <div class="field-input-wrap">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="7" cy="5" r="2.2" fill="currentColor"/>
+            <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="13" cy="10" r="2.2" fill="currentColor"/>
+            <line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="9" cy="15" r="2.2" fill="currentColor"/>
+          </svg>
+          <input class="field-input" id="input-notes" type="text" placeholder="Uso prótese, cão-guia, tenho pressa...">
+        </div>
+      </div>
+
+      <button type="button" class="btn-primary" id="btn-trace" aria-busy="false">
+        <span id="btn-trace-label">Traçar rota</span>
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="error-box" id="error-box" role="alert"></div>
+
+      <div class="result-box" id="result-box" role="status" aria-live="polite">
+        <span class="result-tag" id="result-tag">rota</span>
+        <div class="prefs-preview" id="result-prefs"></div>
+        <div class="result-stats">
+          <span><b id="result-distance">—</b> de distância</span>
+          <span><b id="result-duration">—</b> de caminho</span>
+          <span><b id="result-cost">—</b></span>
+        </div>
+        <p class="result-narrative" id="result-narrative"></p>
+        <div class="alt-list" id="alt-list"></div>
+        <p class="alt-legend">* estimativa a partir das ruas, sem itinerário de linha real</p>
+      </div>
+    </div>
+
+    <div class="map-panel" role="region" aria-label="Mapa com a rota calculada — o resultado completo em texto está no card ao lado">
+      <div id="map"></div>
+      <span class="map-note" id="map-note">mapa real — OpenStreetMap</span>
+    </div>
+  </main>
+
+  <section class="tips">
+    <h2>Dicas pra quem é PCD no Vale do Sinos</h2>
+    <p class="tips-note">Informação geral da região — não é sobre a rota específica que você calculou acima.</p>
+    <div class="tips-grid">
+      <div class="tip-card">
+        <b>Prioridade de atendimento</b>
+        <p>Por lei, pessoas com deficiência têm prioridade de atendimento e assento preferencial no transporte público — vale pros ônibus e pro Trensurb da região.</p>
+      </div>
+      <div class="tip-card">
+        <b>Cão-guia</b>
+        <p>Cães-guia têm acesso garantido por lei em qualquer transporte público e estabelecimento — não precisa avisar antes.</p>
+      </div>
+      <div class="tip-card">
+        <b>Ajuda a melhorar o mapa</b>
+        <p>Encontrou um obstáculo no caminho — degrau, buraco, falta de rampa? Reportar isso (em breve, direto pelo MOVA) ajuda outras pessoas com o mesmo perfil que você. Hoje ainda não temos esse mapeamento pronto.</p>
+      </div>
+      <div class="tip-card">
+        <b>Trensurb</b>
+        <p>Liga Novo Hamburgo, São Leopoldo, Sapucaia e Porto Alegre. Em trajetos longos, vale conferir se a estação mais próxima compensa o trecho até ela.</p>
+      </div>
+      <div class="tip-card">
+        <b>Calçadas mais antigas</b>
+        <p>Bairros mais afastados do centro costumam ter mais trechos de paralelepípedo ou sem rampa. Em dias de chuva, redobre a atenção.</p>
+      </div>
+      <div class="tip-card">
+        <b>Comércios parceiros</b>
+        <p>Farmácias e assistência técnica de próteses/órteses aparecem como sugestão quando estão literalmente no seu caminho — nunca como propaganda forçada.</p>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function(){
+      const API_URL = 'http://localhost:3001/api/route';
+      const MODAL_LABEL = { 'a-pe': 'A pé / cadeira de rodas / apoio', 'onibus': 'Ônibus', 'trem': 'Trem' };
+      const MODAL_FULL_LABEL = {
+        'cadeira-de-rodas': 'Cadeira de rodas',
+        'com-apoio': 'Com apoio / muletas',
+        'carrinho-bebe': 'Carrinho de bebê',
+        'onibus': 'Ônibus',
+        'trem': 'Trem',
+      };
+      const PRIORITY_FULL_LABEL = {
+        rapido: 'Mais rápido',
+        barato: 'Mais barato',
+        acessivel: 'Mais acessível',
+      };
+      // Só essas linhas aparecem no comparativo — bicicleta/carro não fazem parte do
+      // recorte desta página, mesmo que o backend sempre calcule as três.
+      const VISIBLE_ALT_MODALS = ['a-pe', 'onibus', 'trem'];
+
+      const btn = document.getElementById('btn-trace');
+      const btnLabel = document.getElementById('btn-trace-label');
+      const mapNote = document.getElementById('map-note');
+      const errorBox = document.getElementById('error-box');
+      const resultBox = document.getElementById('result-box');
+      const resultTag = document.getElementById('result-tag');
+      const resultDistance = document.getElementById('result-distance');
+      const resultDuration = document.getElementById('result-duration');
+      const resultCost = document.getElementById('result-cost');
+      const resultNarrative = document.getElementById('result-narrative');
+      const altList = document.getElementById('alt-list');
+      const resultPrefs = document.getElementById('result-prefs');
+
+      // ---------- chips de perfil / prioridade (seleção única por grupo) ----------
+      document.querySelectorAll('[data-chip-group]').forEach((group) => {
+        group.addEventListener('click', (e) => {
+          const chip = e.target.closest('.chip');
+          if (!chip) return;
+          group.querySelectorAll('.chip').forEach((c) => c.setAttribute('aria-pressed', 'false'));
+          chip.setAttribute('aria-pressed', 'true');
+        });
+      });
+      function getSelectedChip(groupName) {
+        const group = document.querySelector(`[data-chip-group="${groupName}"]`);
+        const active = group.querySelector('.chip[aria-pressed="true"]');
+        return active ? active.dataset.value : null;
+      }
+
+      // ---------- chips de tipo de necessidade (multi-seleção, cada uma alterna sozinha) ----------
+      document.querySelectorAll('[data-chip-group-multi]').forEach((group) => {
+        group.addEventListener('click', (e) => {
+          const chip = e.target.closest('.chip');
+          if (!chip) return;
+          const pressed = chip.getAttribute('aria-pressed') === 'true';
+          chip.setAttribute('aria-pressed', pressed ? 'false' : 'true');
+        });
+      });
+      function getSelectedMulti(groupName) {
+        const group = document.querySelector(`[data-chip-group-multi="${groupName}"]`);
+        return Array.from(group.querySelectorAll('.chip[aria-pressed="true"]')).map((c) => c.dataset.value);
+      }
+
+      // ---------- mapa ----------
+      const map = L.map('map', { zoomControl: true, attributionControl: true }).setView([-29.73, -51.13], 12);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
+        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+      }).addTo(map);
+
+      const destIcon = L.divIcon({
+        className: 'mova-pin-to',
+        html: '<svg width="26" height="30" viewBox="0 0 20 24"><polygon points="10,1 19,20 1,20" fill="#C23A57" stroke="#150A28" stroke-width="1.5"/></svg>',
+        iconSize: [26, 30],
+        iconAnchor: [13, 20],
+      });
+
+      let routeLayer = null;
+      let markerFrom = null;
+      let markerTo = null;
+      let animFrame = null;
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function drawRoute(geometry) {
+        const latlngs = geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+
+        if (routeLayer) map.removeLayer(routeLayer);
+        if (markerFrom) map.removeLayer(markerFrom);
+        if (markerTo) map.removeLayer(markerTo);
+        if (animFrame) cancelAnimationFrame(animFrame);
+
+        markerFrom = L.circleMarker(latlngs[0], {
+          radius: 8, color: '#150A28', weight: 2, fillColor: '#C23A57', fillOpacity: 1,
+        }).addTo(map);
+        markerTo = L.marker(latlngs[latlngs.length - 1], { icon: destIcon }).addTo(map);
+
+        routeLayer = L.polyline([], { color: '#C23A57', weight: 5, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }).addTo(map);
+        map.fitBounds(L.latLngBounds(latlngs), { padding: [48, 48], animate: !reduceMotion });
+
+        if (reduceMotion) {
+          routeLayer.setLatLngs(latlngs);
+          return;
+        }
+
+        const total = latlngs.length;
+        const duration = 900;
+        const start = performance.now();
+        function step(now) {
+          const t = Math.min(1, (now - start) / duration);
+          const count = Math.max(2, Math.round(t * total));
+          routeLayer.setLatLngs(latlngs.slice(0, count));
+          if (t < 1) {
+            animFrame = requestAnimationFrame(step);
+          }
+        }
+        animFrame = requestAnimationFrame(step);
+      }
+
+      function formatDistance(m) {
+        return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`;
+      }
+      function formatDuration(s) {
+        const min = Math.round(s / 60);
+        return min < 60 ? `${min} min` : `${Math.floor(min / 60)}h${String(min % 60).padStart(2, '0')}`;
+      }
+
+      function renderAlternatives(alternatives, primaryProfile) {
+        altList.innerHTML = '';
+        alternatives
+          .filter((alt) => VISIBLE_ALT_MODALS.includes(alt.modal))
+          .forEach((alt) => {
+            const row = document.createElement('div');
+            row.className = 'alt-row' + (alt.available && alt.profile === primaryProfile ? ' primary' : '');
+            const name = MODAL_LABEL[alt.modal] || alt.modal;
+            if (!alt.available) {
+              row.title = alt.reason || '';
+              row.innerHTML = `<span class="alt-name">${name}</span><span class="alt-figures">${alt.reason ? 'indisponível — ' + alt.reason : 'indisponível'}</span>`;
+            } else {
+              if (alt.note) row.title = alt.note;
+              row.innerHTML = `<span class="alt-name">${name}${alt.note ? ' *' : ''}</span>` +
+                `<span class="alt-figures"><span>${formatDuration(alt.durationSeconds)}</span>` +
+                `<span class="price">${alt.cost.label}</span></span>`;
+            }
+            altList.appendChild(row);
+          });
+      }
+
+      async function traceRoute() {
+        const from = document.getElementById('input-from').value.trim();
+        const to = document.getElementById('input-to').value.trim();
+        const notesText = document.getElementById('input-notes').value.trim();
+        const modal = getSelectedChip('modal');
+        const priority = getSelectedChip('priority');
+        const needs = getSelectedMulti('necessidade');
+
+        // Junta o tipo de necessidade marcado com a observação livre, num só campo de
+        // contexto pra narrativa — o backend não precisa saber que isso veio de chips.
+        const noteParts = [];
+        if (needs.length) noteParts.push(`Tipo de necessidade: ${needs.join(', ')}`);
+        if (notesText) noteParts.push(notesText);
+        const notes = noteParts.join('. ') || null;
+
+        errorBox.classList.remove('show');
+        resultBox.classList.remove('show');
+
+        if (!from || !to) {
+          errorBox.textContent = 'Preenche "Partida" e "Destino" antes de traçar a rota.';
+          errorBox.classList.add('show');
+          return;
+        }
+
+        btn.disabled = true;
+        btn.setAttribute('aria-busy', 'true');
+        btnLabel.textContent = 'Traçando rota...';
+
+        try {
+          const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from, to, modal, priority, notes }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.error || 'Não consegui calcular essa rota.');
+          }
+
+          drawRoute(data.geometry);
+          mapNote.textContent = 'rota real — OpenStreetMap + OSRM';
+
+          resultTag.textContent = data.narrativeSource === 'ai' ? 'narrativa por IA' : 'rota calculada';
+          resultPrefs.innerHTML =
+            `<span class="prefs-chip">Perfil: <b>${MODAL_FULL_LABEL[data.modal] || data.modal}</b></span>` +
+            `<span class="prefs-chip">Prioridade: <b>${PRIORITY_FULL_LABEL[data.priority] || data.priority}</b></span>`;
+          resultDistance.textContent = formatDistance(data.distanceMeters);
+          resultDuration.textContent = formatDuration(data.durationSeconds);
+          resultCost.textContent = data.cost.label;
+          resultNarrative.textContent = data.narrative;
+          renderAlternatives(data.alternatives, data.profile);
+          resultBox.classList.add('show');
+        } catch (err) {
+          const offline = err instanceof TypeError;
+          errorBox.textContent = offline
+            ? 'Não consegui falar com o backend. Ele está rodando em localhost:3001? (npm start na pasta mova-backend)'
+            : err.message;
+          errorBox.classList.add('show');
+        } finally {
+          btn.disabled = false;
+          btn.setAttribute('aria-busy', 'false');
+          btnLabel.textContent = 'Traçar rota';
+        }
+      }
+
+      btn.addEventListener('click', traceRoute);
+    })();
+  </script>
+</body>
+</html>
