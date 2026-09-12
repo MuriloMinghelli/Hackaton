@@ -410,7 +410,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     (function(){
-      const API_URL = 'http://localhost:3001/api/route';
+      const API_URL = 'https://hackaton-production-e0e5.up.railway.app/api/route';
       const MODAL_LABEL = { 'a-pe': 'A pé', 'bicicleta': 'Bicicleta', 'carro': 'Carro', 'onibus': 'Ônibus', 'trem': 'Trem' };
       const MODAL_FULL_LABEL = {
         'a-pe': 'A pé',
@@ -597,7 +597,7 @@
         } catch (err) {
           const offline = err instanceof TypeError; // fetch falhou antes de chegar no servidor
           errorBox.textContent = offline
-            ? 'Não consegui falar com o backend. Ele está rodando em localhost:3001? (npm start na pasta mova-backend)'
+            ? 'Não consegui falar com o backend. Tenta de novo em alguns segundos — se ele tiver ficado inativo, o primeiro pedido demora um pouco pra acordar.'
             : err.message;
           errorBox.classList.add('show');
         } finally {
