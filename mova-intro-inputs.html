@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOVA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;800;900&display=swap">
+<style>
+  :root{
+    --bg:#150A28;
+    --panel:#20103f;
+    --ink:#F4EEF7;
+    --ink-soft:#a996c4;
+    --accent:#C23A57;
+    --font-display:'Unbounded','Arial Black',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:100vh;
+    padding:24px;
+  }
+
+  .corner-logo{
+    position:fixed;
+    top:20px;
+    left:26px;
+    z-index:10;
+    display:flex;
+    flex-direction:column;
+    color:var(--accent);
+    font-family:var(--font-display);
+    font-weight:800;
+    font-size:14px;
+    line-height:0.82;
+    letter-spacing:-0.02em;
+  }
+
+  .hero-stage{
+    width:100%;
+    min-height:80vh;         /* a logo fica centralizada nessa faixa, sem depender da altura do card */
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .hero-inner{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:32px;
+  }
+
+  .btn-travel{
+    display:inline-flex; align-items:center; gap:10px;
+    background:var(--accent); color:#fff; text-decoration:none;
+    border-radius:999px;
+    padding:15px 28px;
+    font-family:var(--font-display); font-weight:700; font-size:15px;
+    opacity:0; transform:translateY(10px); pointer-events:none;
+    transition:opacity .5s ease, transform .5s ease, background .15s ease, transform .1s ease;
+  }
+  body.revealed .btn-travel{
+    opacity:1; transform:translateY(0); pointer-events:auto;
+    transition-delay:1.1s;
+  }
+  .btn-travel:hover{background:#e0335f;}
+  .btn-travel:active{transform:scale(.97);}
+  .btn-travel svg{width:20px; height:20px;}
+
+  .link-pcd{
+    font-family:'Segoe UI',sans-serif; font-size:13px; font-weight:600;
+    color:var(--ink-soft); text-decoration:none;
+    opacity:0; transform:translateY(10px); pointer-events:none;
+    transition:opacity .5s ease, transform .5s ease, color .15s ease;
+  }
+  body.revealed .link-pcd{
+    opacity:1; transform:translateY(0); pointer-events:auto;
+    transition-delay:1.25s;
+  }
+  .link-pcd:hover{color:var(--ink);}
+
+  h1.wordmark{
+    margin:0; color:var(--accent); font-family:var(--font-display); font-weight:800;
+    display:grid; grid-template-columns:repeat(2,max-content); justify-content:center;
+    line-height:0.84; letter-spacing:-0.02em;
+  }
+  .wordmark .ltr{
+    font-size:clamp(64px,17vw,180px);
+    display:inline-block;
+  }
+  .wordmark .ltr:nth-child(3),
+  .wordmark .ltr:nth-child(4){margin-top:-0.1em;}
+  .wordmark .rest{
+    font-size:clamp(64px,17vw,180px);
+    color:var(--ink);
+    font-weight:700;
+    opacity:0;
+    transform:translateX(-10px);
+    transition:opacity .5s ease .5s, transform .5s ease .5s;
+    grid-column:1 / -1;
+    text-transform:lowercase;
+    display:none;
+  }
+  body.phase-hero .wordmark{
+    display:flex; flex-wrap:wrap; align-items:baseline; justify-content:center;
+  }
+  body.phase-hero .wordmark .ltr{
+    font-size:clamp(40px,9vw,96px); margin-top:0; letter-spacing:-0.01em;
+  }
+  body.phase-hero .wordmark .rest{
+    display:inline-block; font-size:clamp(40px,9vw,96px); margin-left:0.14em; order:5;
+  }
+  body.phase-hero.revealed .wordmark .rest{opacity:1; transform:translateX(0);}
+  body.phase-hero .l-v{order:1;}
+  body.phase-hero .l-a{order:2;}
+  body.phase-hero .l-m{order:3;}
+  body.phase-hero .l-o{order:4;}
+
+  @media (prefers-reduced-motion: reduce){
+    .wordmark .rest, .container{transition:none !important;}
+  }
+
+  /* ---------- inputs: abaixo do logo, alinhados à esquerda ---------- */
+  .container{
+    align-self:flex-start;
+    width:min(360px, 86vw);
+    margin-top:120px;
+    margin-left:140px;
+    background:var(--panel);
+    border:1px solid rgba(244,238,247,.08);
+    border-radius:18px;
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .5s ease;
+  }
+  body.revealed .container{
+    opacity:1;
+    pointer-events:auto;
+    transition-delay:1.1s;
+  }
+
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{
+    font-size:11px; text-transform:uppercase; letter-spacing:.08em;
+    font-weight:600; color:var(--ink-soft);
+  }
+  .field-input-wrap{position:relative;}
+  .field-input-wrap svg{
+    position:absolute; left:14px; top:50%; translate:0 -50%;
+    width:18px; height:18px; color:#fff; pointer-events:none;
+  }
+  .field-input{
+    outline:none;
+    appearance:none;
+    font:inherit;
+    font-weight:500;
+    color:#fff;
+    background:var(--accent);
+    border:1.5px solid var(--accent);
+    border-radius:10px;
+    padding:12px 14px 12px 42px;
+    width:100%;
+    transition:background .15s ease, box-shadow .15s ease;
+  }
+  .field-input::placeholder{color:#fff; opacity:.75;}
+  .field-input:focus{
+    background:#a92a45;
+    box-shadow:0 0 0 3px rgba(194,58,87,.35);
+  }
+
+  .btn-primary{
+    margin-top:4px;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:#fff; color:var(--accent);
+    border:none; border-radius:10px;
+    padding:13px 18px;
+    font-family:var(--font-display); font-weight:700; font-size:14.5px;
+    cursor:pointer;
+    transition:transform .1s ease, background .15s ease;
+  }
+  .btn-primary svg{width:18px; height:18px;}
+  .btn-primary:hover{background:#ffe1ea;}
+  .btn-primary:active{transform:scale(.98);}
+</style>
+</head>
+<body>
+  <div class="corner-logo" aria-label="MOVA">
+    <span aria-hidden="true">MO</span>
+    <span aria-hidden="true">VA</span>
+  </div>
+
+  <div class="hero-stage">
+    <div class="hero-inner">
+      <h1 class="wordmark" id="wordmark">
+        <span class="ltr l-m"><span class="glyph">M</span></span>
+        <span class="ltr l-o"><span class="glyph">O</span></span>
+        <span class="ltr l-v"><span class="glyph">V</span></span>
+        <span class="ltr l-a"><span class="glyph">A</span></span>
+        <span class="rest">&nbsp;aonde?</span>
+      </h1>
+
+      <a class="btn-travel" href="viagem.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Viajar
+      </a>
+
+      <a class="link-pcd" href="pcd.html">já sei que preciso de rota PCD →</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="field">
+      <label for="input-from">Partida</label>
+      <div class="field-input-wrap">
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="10" cy="10" r="2.4" fill="currentColor"/>
+        </svg>
+        <input class="field-input" id="input-from" type="text" placeholder="Onde você está?">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="input-to">Destino</label>
+      <div class="field-input-wrap">
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <polygon points="10,2 18,17 2,17" fill="currentColor"/>
+        </svg>
+        <input class="field-input" id="input-to" type="text" placeholder="Pra onde vai?">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="input-prefs">Preferências</label>
+      <div class="field-input-wrap">
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <line x1="2" y1="5" x2="18" y2="5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="7" cy="5" r="2.2" fill="currentColor"/>
+          <line x1="2" y1="10" x2="18" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="13" cy="10" r="2.2" fill="currentColor"/>
+          <line x1="2" y1="15" x2="18" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="9" cy="15" r="2.2" fill="currentColor"/>
+        </svg>
+        <input class="field-input" id="input-prefs" type="text" placeholder="Rápido, barato, acessível...">
+      </div>
+    </div>
+
+    <button type="button" class="btn-primary">
+      Traçar rota
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M4 10h11M11 5l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    (function(){
+      var body = document.body;
+      var letters = Array.prototype.slice.call(document.querySelectorAll('.wordmark .ltr'));
+      var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      function applyFinal(el){
+        var glyph = el.querySelector('.glyph') || el;
+        var f = glyph.getAttribute('data-final');
+        if (f) glyph.textContent = f;
+      }
+
+      function morph(){
+        var first = letters.map(function(el){ return el.getBoundingClientRect(); });
+        body.classList.add('phase-hero');
+        letters.forEach(applyFinal);
+        var last = letters.map(function(el){ return el.getBoundingClientRect(); });
+        letters.forEach(function(el, i){
+          var f = first[i], l = last[i];
+          var dx = f.left - l.left, dy = f.top - l.top;
+          var sx = f.width / l.width, sy = f.height / l.height;
+          el.style.transformOrigin = 'top left';
+          el.style.transition = 'none';
+          el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + sx + ',' + sy + ')';
+        });
+        void body.offsetHeight;
+        letters.forEach(function(el){
+          el.style.transition = 'transform .75s cubic-bezier(.16,.9,.28,1)';
+          el.style.transform = 'translate(0,0) scale(1,1)';
+        });
+        body.classList.add('revealed');
+      }
+
+      if (reduced){
+        body.classList.add('phase-hero', 'revealed');
+        letters.forEach(applyFinal);
+      } else {
+        setTimeout(morph, 900);
+      }
+    })();
+  </script>
+</body>
+</html>
