@@ -74,14 +74,14 @@ Checagem simples — `{ "ok": true }`.
 
 ## Publicando (deploy)
 
-Esse backend precisa rodar num servidor Node de verdade — GitHub Pages só serve arquivos
-estáticos, então o front-end (`index.html`, `viagem.html`, `pcd.html`) pode ir pro GitHub
-Pages, mas essa pasta precisa de um host separado (ex: Render, Railway, Fly.io — todos têm
-plano grátis suficiente pra um protótipo):
+Está publicado no Railway, com "Root Directory" = `mova-backend`, build `npm install` e
+start `npm start`, público em:
 
-1. Crie um serviço novo apontando pra esse repositório, com "Root Directory" = `mova-backend`.
-2. Build command: `npm install`. Start command: `npm start`.
-3. Configure a variável de ambiente `ANTHROPIC_API_KEY` no painel do serviço (nunca no código).
-4. Depois do deploy, você recebe uma URL pública (ex: `https://mova-backend.onrender.com`).
-5. Troque `API_URL` em `viagem.html` e `pcd.html` (raiz do repo) de
-   `http://localhost:3001/api/route` para `https://SEU-BACKEND.onrender.com/api/route`.
+```
+https://hackaton-production-e0e5.up.railway.app
+```
+
+`API_URL` em `viagem.html` e `pcd.html` (raiz do repo) já aponta pra essa URL. Se recriar o
+serviço em outro host, é só repetir os mesmos passos (Root Directory `mova-backend`, build
+`npm install`, start `npm start`, variável `ANTHROPIC_API_KEY` opcional no painel do serviço
+— nunca no código) e atualizar `API_URL` nos dois arquivos.

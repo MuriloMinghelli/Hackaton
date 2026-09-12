@@ -18,32 +18,16 @@ site estático. O backend é uma API separada (veja `mova-backend/README.md`).
 
 ## Publicando o site
 
-Publicar isso "de verdade" tem duas partes, porque GitHub Pages só serve arquivos estáticos
-e o backend precisa rodar num servidor Node.
+Publicado nas duas pontas, já que GitHub Pages só serve arquivos estáticos e o backend
+precisa de um servidor Node de verdade:
 
-### 1. Front-end → GitHub Pages (grátis)
+- **Front-end**: GitHub Pages, servindo `index.html` na raiz do repositório.
+- **Backend**: Railway, rodando `mova-backend` (Root Directory configurado pra essa pasta),
+  público em `https://hackaton-production-e0e5.up.railway.app`.
 
-1. No GitHub, abra o repositório → **Settings → Pages**.
-2. Em "Build and deployment", escolha **Deploy from a branch**.
-3. Selecione a branch onde este código está (ex: `main`, depois de mesclar) e a pasta `/ (root)`.
-4. Salve. Em alguns minutos o site fica em `https://SEU-USUARIO.github.io/NOME-DO-REPO/`.
-
-O GitHub Pages serve `index.html` automaticamente na raiz — por isso a home foi renomeada
-pra `index.html`.
-
-### 2. Backend → um host de Node (Render, Railway, Fly.io...)
-
-GitHub Pages não roda `server.js`. Siga o passo a passo em `mova-backend/README.md` (seção
-"Publicando (deploy)") pra subir o backend separadamente e pegar uma URL pública.
-
-### 3. Ligar as duas pontas
-
-Depois que o backend estiver publicado, edite `API_URL` em `viagem.html` e `pcd.html` (raiz
-do repo) trocando `http://localhost:3001/api/route` pela URL pública do backend, faça commit
-e push de novo — o GitHub Pages atualiza sozinho.
-
-Sem esse passo, o site abre e navega normalmente, mas "Traçar rota" mostra o erro de que não
-conseguiu falar com o backend (esperado, já que `localhost:3001` só existe na sua máquina).
+`API_URL` em `viagem.html` e `pcd.html` já aponta pra essa URL do Railway — se o backend for
+recriado ou mudar de endereço, é só editar essa constante nos dois arquivos, commitar e dar
+push que o GitHub Pages atualiza sozinho.
 
 ## Rodando local
 
